@@ -1,19 +1,17 @@
 {
-  "name": "winyama_drone_yard",
+  "name": "drone_wrangler",
   "version": "0.1.0",
   "bin": {
-    "winyama_drone_yard": "bin/winyama_drone_yard.js"
+    "drone_wrangler": "bin/drone_wrangler.js"
   },
   "scripts": {
-    "postinstall": "cd functions/dispatch-handler && npm install",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
-    "@types/node": "20.11.19",
+    "@types/node": "^20.11.19",
     "aws-cdk": "2.131.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
@@ -21,7 +19,7 @@
     "typescript": "~5.3.3"
   },
   "dependencies": {
-    "aws-cdk-lib": "2.131.0",
+    "aws-cdk-lib": "^2.182.0",
     "constructs": "^10.0.0",
     "source-map-support": "^0.5.21"
   }

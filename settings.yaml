@@ -1,4 +1,4 @@
-3d_tiles: False
+3d_tiles: True
 auto_boundary: True
 build_overviews: False
 camera_lens: "auto"

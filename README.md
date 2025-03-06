@@ -9,7 +9,9 @@ DroneYard borrows inspiration and some code from https://github.com/hobuinc/codm
 choices about dependencies. In particular, everything is handled by the CDK so it can be built and deployed
 with one single command.
 
-This is an adaptation of the original DroneYard to account for deprecated AWS features and updated dependencies and of WinyamaDroneYard  - including code originally from https://github.com/TotallyGatsby/DroneYard and https://github.com/AlexCarusoFan4/WinyamaDroneYard. A huge thank you to @TotallyGatsby for their DroneYard solution and @AlexCarusoFan4 for WinyamaDroneYard
+This is an adaptation of the original DroneYard to account for deprecated AWS features and updated dependencies and of WinyamaDroneYard  - including code originally from https://github.com/TotallyGatsby/DroneYard and https://github.com/AlexCarusoFan4/WinyamaDroneYard. 
+
+A huge thank you to @TotallyGatsby for their DroneYard solution and @AlexCarusoFan4 for WinyamaDroneYard
 
 The goal is to make setup and deployment as simple as possible, and rely only on AWS, Docker, and NPM.
 
