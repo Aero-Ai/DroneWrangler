@@ -11,5 +11,5 @@
     "vpcid":"YOUR_VPCID_HERE",
     "bucketArnToSearchForImages":"YOUR_ARN_BUCKET_HERE"
   },
-  "notificationEmail": "bshafer93@gmail.com"
+  "notificationEmail": "YOUR_EMAIL_HERE"
 }
