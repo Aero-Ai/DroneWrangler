@@ -40,6 +40,7 @@ exports.handler = async (event) => {
 
     log.info('Execution', `Launching with params: ${JSON.stringify(params)}`);
     try {
+      //Send Images out for processing
       const results = await Batch.submitJob(params).promise();
       log.info('Execution', JSON.stringify(results)); // successful response)
     } catch (err) {
