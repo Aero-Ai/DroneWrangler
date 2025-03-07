@@ -10,7 +10,7 @@ jobs:
         with:
           find: "\"vpcid.*\","
           replace: "\"YOUR_VPC_ID\","
-          include: "**awsconfig.json"
+          include: "awsconfig.json"
           regex: true
 
       - name: Find and Replace
@@ -18,5 +18,5 @@ jobs:
         with:
           find: "\"bucketArnToSearchForImages.*\""
           replace: "\"YOUR_BUCKET_ARN\""
-          include: "**awsconfig.json"
+          include: "awsconfig.json"
           regex: true
