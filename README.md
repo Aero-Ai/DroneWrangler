@@ -1,11 +1,11 @@
 # DroneWrangler - OpenDroneMap Serverless Automation
 
-DroneYard makes running OpenDroneMap automatically as simple as uploading your images and downloading
+DroneWrangler makes running OpenDroneMap automatically as simple as uploading your images and downloading
 the results. DroneYard is a set of automated tooling built on top of AWS Batch that monitors
 an S3 bucket for changes, and when it detects the presence of a trigger file, it will launch a
 batch job to process your images.
 
-DroneYard borrows inspiration and some code from https://github.com/hobuinc/codm, but makes different
+DroneWrangler borrows inspiration and some code from https://github.com/hobuinc/codm, but makes different
 choices about dependencies. In particular, everything is handled by the CDK so it can be built and deployed
 with one single command.
 
@@ -49,6 +49,8 @@ cd WinyamaDroneYard
 npm install
 
 # If this your first time deploying to this account, you will need to bootstrap your AWS account.
+
+Add the ARN of the bucket you want the lambda function to look through in the bin/drone_wrangler.ts
 
 cdk boostrap
 
