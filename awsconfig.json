@@ -8,8 +8,8 @@
     ]
   },
   "droneWranglerConfig":{
-    "vpcid":"YOUR_VPCID_HERE",
-    "bucketArnToSearchForImages":"YOUR_ARN_BUCKET_HERE"
+    "vpcid":"vpc-0ea897b35dc54b310",
+    "bucketArnToSearchForImages":"arn:aws:s3:::user-drone-data-dev"
   },
-  "notificationEmail": "YOUR_EMAIL_HERE"
+  "notificationEmail": "bshafer93@gmail.com"
 }
