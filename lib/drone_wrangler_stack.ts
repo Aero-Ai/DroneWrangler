@@ -120,7 +120,7 @@ export class DroneWranglerStack extends cdk.Stack {
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess"));
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AWSBatchFullAccess"));
 
-
+    /*
     const dispatchFunction = new lambda.Function(this, 'DispatchHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
@@ -131,7 +131,7 @@ export class DroneWranglerStack extends cdk.Stack {
         JOB_QUEUE: jobQueue.jobQueueName
       }
     })
-
+    */
     const dispatchManualFunction = new lambda.Function(this, 'DispatchManualHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
@@ -170,7 +170,11 @@ export class DroneWranglerStack extends cdk.Stack {
     const premadePhotoBucket = s3.Bucket.fromBucketAttributes(this,"ImportedPhotosBucket",{
       bucketArn:awsConfig.droneWranglerConfig.bucketArnToSearchForImages,
     });
+
+    /*
     premadePhotoBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
+    */
+   
     premadePhotoBucket.grantReadWrite(dockerRole);
 
     const event = new events.Rule(this, 'NotificationRule', {
