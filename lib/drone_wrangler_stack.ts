@@ -83,7 +83,7 @@ export class DroneWranglerStack extends cdk.Stack {
     const logging = new ecs.AwsLogDriver({ streamPrefix: "dronewranglerruns" })
 
     const jobDefinition = new batch.EcsJobDefinition(this, 'DroneYardJobDefinition', {
-      timeout: cdk.Duration.hours(24),
+      timeout: cdk.Duration.hours(5),
       container: new batch.EcsEc2ContainerDefinition(this, 'DroneYardContainerDefinition', {
         command: [
           'sh',
