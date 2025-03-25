@@ -27,7 +27,9 @@ export class DroneWranglerStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const vpc = new ec2.Vpc(this, 'DRONEWRANGLERVPC');
+    const vpc = ec2.Vpc.fromLookup(this,'devvpc',{
+      vpcId: awsConfig.droneWranglerConfig.vpcid
+    });
 
     const userData = fs.readFileSync('./userdata.sh').toString();
     const setupCommands = ec2.UserData.forLinux();
@@ -123,10 +125,10 @@ export class DroneWranglerStack extends cdk.Stack {
         JOB_QUEUE: jobQueue.jobQueueName
       }
     })
-
-    const dronePhotosBucket = new s3.Bucket(this, 'DronePhotos', {      
+    //Get the bucket for all user's data. 
+    const dronePhotosBucket = s3.Bucket.fromBucketAttributes(this,"ImportedPhotosBucket",{
+      bucketArn:awsConfig.droneWranglerConfig.bucketArnToSearchForImages,
     });
-
     dronePhotosBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
     dronePhotosBucket.grantReadWrite(dockerRole);
 
@@ -144,10 +146,13 @@ export class DroneWranglerStack extends cdk.Stack {
       }
     });
 
+    /*
     new s3Deploy.BucketDeployment(this, 'settings yaml', {
       sources: [s3Deploy.Source.asset(root_directory, { exclude: ['**', '.*', '!settings.yaml'] })],
       destinationBucket: dronePhotosBucket
     });
+    */
+
   }
 }
 
