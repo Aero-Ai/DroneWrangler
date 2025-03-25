@@ -4,12 +4,12 @@
     "minvCpus": 0,
     "maxvCpus": 128,
     "instanceTypes": [
-      "r5.4xlarge"
+      "r6id.4xlarge"
     ]
   },
   "droneWranglerConfig":{
     "vpcid":"vpc-0ea897b35dc54b310",
-    "bucketArnToSearchForImages":"arn:aws:s3:::odm-test-users"
+    "bucketArnToSearchForImages":"arn:aws:s3:::user-drone-data-dev"
   },
   "notificationEmail": "bshafer93@gmail.com"
 }
