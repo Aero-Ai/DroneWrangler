@@ -20,6 +20,13 @@ echo "processing images from '$KEY' in bucket $BUCKET to $OUTPUT"
 cd /code
 
 mkdir /local/images
+
+cp -r . odmoutput
+
+python3 -m zipfile -c odmoutput.zip odmoutput/ 
+
+aws s3 cp odmoutput.zip s3://$BUCKET/$KEY/odmoutput.zip
+
 ln -s /local/images /code/images
 
 aws s3 sync s3://$BUCKET/$KEY/ /local/images --no-progress

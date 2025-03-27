@@ -96,7 +96,7 @@ export class DroneWranglerStack extends cdk.Stack {
         gpu: awsConfig.computeEnv.useGpu ? 1 : 0,
         image: ecs.ContainerImage.fromDockerImageAsset(dockerImage),
         memory: cdk.Size.mebibytes(120000),
-        cpu: 1,
+        cpu: 4,
         privileged: true,
         volumes: [batch.EcsVolume.host({
           name: 'local',
@@ -114,6 +114,16 @@ export class DroneWranglerStack extends cdk.Stack {
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess"));
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AWSBatchFullAccess"));
 
+    //Lambda For Zipping and Emailing
+
+    const zipandsendLambdaRole = new iam.Role(this, 'zip-and-send-lambda-role', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com')
+    })
+
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"));
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess"));
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonSESFullAccess"));
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AWSBatchFullAccess"));
 
     const dispatchFunction = new lambda.Function(this, 'DispatchHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -125,12 +135,25 @@ export class DroneWranglerStack extends cdk.Stack {
         JOB_QUEUE: jobQueue.jobQueueName
       }
     })
+
+    const sendandzipFunction = new lambda.Function(this, 'zipadnsendHandler', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      memorySize: 2048,
+      timeout: cdk.Duration.minutes(10),
+      code: lambda.Code.fromAsset('functions/zip-and-send'),
+      role: zipandsendLambdaRole,
+      environment: {
+      }
+    })
+
     //Get the bucket for all user's data. 
     const dronePhotosBucket = s3.Bucket.fromBucketAttributes(this,"ImportedPhotosBucket",{
       bucketArn:awsConfig.droneWranglerConfig.bucketArnToSearchForImages,
     });
     dronePhotosBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
     dronePhotosBucket.grantReadWrite(dockerRole);
+    dronePhotosBucket.grantReadWrite(zipandsendLambdaRole);
 
     const event = new events.Rule(this, 'NotificationRule', {
       ruleName: 'DroneYardNotificationRule',
