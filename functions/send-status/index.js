@@ -8,21 +8,9 @@ const ses = new AWS.SES({ region: 'us-west-2' });
 
 exports.handler = async (event) => {
     try {
-        // Configuration - replace with your values
-        const sourceBucket = 'user-drone-data-dev';
-        const targetBucket = 'user-drone-data-dev/brentshaferImagePipelineFullTest01';
-        const zipFileName = `odmoutput.zip`;
-        const recipientEmail = 'bshafer93@gmail.com'; 
+        const recipientEmail = event.detail.parameters.email;
+        const jobStatus = event.detail.status;
         
-
-        // Generate a pre-signed URL that expires in 2 days (172800 seconds)
-        const downloadUrl = s3.getSignedUrl('getObject', {
-          Bucket: targetBucket,
-          Key: zipFileName,
-          ResponseContentDisposition: 'attachment;',
-          Expires: 172800
-      });
-      
       // Send email with the download link
       const emailParams = {
           Source: 'info@aeroai.io',
@@ -31,11 +19,11 @@ exports.handler = async (event) => {
           },
           Message: {
               Subject: {
-                  Data: 'Your files are ready for download'
+                  Data: 'Image Processing Status Update'
               },
               Body: {
                   Text: {
-                      Data: `Hello,\n\nYour requested files have been packaged. You can download them using this link:\n${downloadUrl}\n\nThis link will expire in 2 days.\n\nThank you!`
+                      Data: `Hello,\n\nthe status of your processing job has changed to: \n\n${jobStatus}\n\nThank you!`
                   }
               }
           }

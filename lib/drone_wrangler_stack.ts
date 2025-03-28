@@ -19,9 +19,6 @@ const awsConfig = require('../awsconfig.json');
 // eslint-disable-next-line no-underscore-dangle
 const root_directory = path.resolve();
 
-
-
-
 export class DroneWranglerStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -136,12 +133,12 @@ export class DroneWranglerStack extends cdk.Stack {
       }
     })
 
-    const sendandzipFunction = new lambda.Function(this, 'zipadnsendHandler', {
+    const sendzipFunction = new lambda.Function(this, 'sendzipHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      memorySize: 2048,
-      timeout: cdk.Duration.minutes(10),
-      code: lambda.Code.fromAsset('functions/zip-and-send'),
+      memorySize: 512,
+      timeout: cdk.Duration.minutes(2),
+      code: lambda.Code.fromAsset('functions/send-zip'),
       role: zipandsendLambdaRole,
       environment: {
       }
@@ -152,6 +149,7 @@ export class DroneWranglerStack extends cdk.Stack {
       bucketArn:awsConfig.droneWranglerConfig.bucketArnToSearchForImages,
     });
     dronePhotosBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
+    dronePhotosBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(sendzipFunction), {suffix: 'odmoutput.zip'});
     dronePhotosBucket.grantReadWrite(dockerRole);
     dronePhotosBucket.grantReadWrite(zipandsendLambdaRole);
 
@@ -168,6 +166,8 @@ export class DroneWranglerStack extends cdk.Stack {
         }
       }
     });
+
+    //event.addTarget(new eventTarget.LambdaFunction(snsFunction));
 
     /*
     new s3Deploy.BucketDeployment(this, 'settings yaml', {
