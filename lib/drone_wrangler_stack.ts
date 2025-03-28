@@ -133,6 +133,17 @@ export class DroneWranglerStack extends cdk.Stack {
       }
     })
 
+    const sendstatusFunction = new lambda.Function(this, 'SendStatusHandler', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('functions/send-status'),
+      role: zipandsendLambdaRole,
+      environment: {
+        JOB_DEFINITION: jobDefinition.jobDefinitionName,
+        JOB_QUEUE: jobQueue.jobQueueName
+      }
+    })
+
     const sendzipFunction = new lambda.Function(this, 'sendzipHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
@@ -167,7 +178,7 @@ export class DroneWranglerStack extends cdk.Stack {
       }
     });
 
-    //event.addTarget(new eventTarget.LambdaFunction(snsFunction));
+    event.addTarget(new eventTarget.LambdaFunction(sendstatusFunction));
 
     /*
     new s3Deploy.BucketDeployment(this, 'settings yaml', {

@@ -5,7 +5,7 @@ const stream = require('stream');
 // Initialize AWS services
 const s3 = new AWS.S3();
 const ses = new AWS.SES({ region: 'us-west-2' });
-
+const Batch = new AWS.Batch();
 exports.handler = async (event) => {
     try {
         const recipientEmail = event.detail.parameters.email;
