@@ -4,6 +4,7 @@ const log = require('npmlog');
 const Batch = new AWS.Batch();
 // Initialize AWS services
 const s3 = new AWS.S3();
+
 exports.handler = async (event) => {
   log.info('Execution', `Beginning dispatch_batch_job execution. ${JSON.stringify(event)}`);
 

@@ -1,6 +1,5 @@
 const AWS = require('aws-sdk');
-const archiver = require('archiver');
-const stream = require('stream');
+
 
 // Initialize AWS services
 const s3 = new AWS.S3();
