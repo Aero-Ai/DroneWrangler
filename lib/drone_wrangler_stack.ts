@@ -27,11 +27,9 @@ export class DroneWranglerStack extends cdk.Stack {
 
     super(scope, id, props);
 
-    //const vpc = new ec2.Vpc(this, 'DRONEWRANGLERVPC');
     const vpc = ec2.Vpc.fromLookup(this,'devvpc',{
-      vpcId:awsConfig.droneWranglerConfig.vpcid
+      vpcId: awsConfig.droneWranglerConfig.vpcid
     });
-
 
     const userData = fs.readFileSync('./userdata.sh').toString();
     const setupCommands = ec2.UserData.forLinux();
@@ -86,10 +84,11 @@ export class DroneWranglerStack extends cdk.Stack {
       directory: path.join(root_directory, "webodm_docker")
     });
 
+    
     const logging = new ecs.AwsLogDriver({ streamPrefix: "dronewranglerruns" })
 
     const jobDefinition = new batch.EcsJobDefinition(this, 'DroneYardJobDefinition', {
-      timeout: cdk.Duration.hours(24),
+      timeout: cdk.Duration.hours(5),
       container: new batch.EcsEc2ContainerDefinition(this, 'DroneYardContainerDefinition', {
         command: [
           'sh',
@@ -101,8 +100,8 @@ export class DroneWranglerStack extends cdk.Stack {
         ],
         gpu: 0,
         image: ecs.ContainerImage.fromDockerImageAsset(dockerImage),
-        memory: cdk.Size.mebibytes(120000),
-        cpu: 1,
+        memory: cdk.Size.gibibytes(480),
+        cpu: 16,
         privileged: true,
         volumes: [batch.EcsVolume.host({
           name: 'local',
@@ -120,7 +119,17 @@ export class DroneWranglerStack extends cdk.Stack {
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess"));
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AWSBatchFullAccess"));
 
-    /*
+    //Lambda For Zipping and Emailing
+
+    const zipandsendLambdaRole = new iam.Role(this, 'zip-and-send-lambda-role', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com')
+    })
+
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole"));
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess"));
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonSESFullAccess"));
+    zipandsendLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AWSBatchFullAccess"));
+
     const dispatchFunction = new lambda.Function(this, 'DispatchHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
@@ -131,51 +140,37 @@ export class DroneWranglerStack extends cdk.Stack {
         JOB_QUEUE: jobQueue.jobQueueName
       }
     })
-    */
-    const dispatchManualFunction = new lambda.Function(this, 'DispatchManualHandler', {
+
+    const sendstatusFunction = new lambda.Function(this, 'SendStatusHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('functions/dispatch-handler-manual'),
-      role: dispatchLambdaRole,
+      code: lambda.Code.fromAsset('functions/send-status'),
+      role: zipandsendLambdaRole,
       environment: {
         JOB_DEFINITION: jobDefinition.jobDefinitionName,
         JOB_QUEUE: jobQueue.jobQueueName
       }
-    });
+    })
 
-    const httpApi = new apigwv2.HttpApi(this, 'DroneProcessingHttpApi', {
-      apiName: 'Manual Drone Processing API',
-      description: 'This service processes drone images already uploaded to the DroneWrangler S3 bucket',
-      corsPreflight: {
-        allowOrigins: ['*'],
-        allowMethods: [apigwv2.CorsHttpMethod.POST,apigwv2.CorsHttpMethod.GET],
-        allowHeaders: ['*'],
-        maxAge: cdk.Duration.days(1)
+    const sendzipFunction = new lambda.Function(this, 'sendzipHandler', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      memorySize: 512,
+      timeout: cdk.Duration.minutes(2),
+      code: lambda.Code.fromAsset('functions/send-zip'),
+      role: zipandsendLambdaRole,
+      environment: {
       }
-    });
-
-    const lambdaIntegration = new integrations.HttpLambdaIntegration(
-      'DroneProcessingManualIntegration',
-      dispatchManualFunction
-    );
-
-    // Add a route to the HTTP API that integrates with the Lambda function
-    httpApi.addRoutes({
-      path: '/sendProcessingJob',
-      methods: [apigwv2.HttpMethod.POST],
-      integration: lambdaIntegration,
-    });
+    })
 
     //Get the bucket for all user's data. 
-    const premadePhotoBucket = s3.Bucket.fromBucketAttributes(this,"ImportedPhotosBucket",{
+    const dronePhotosBucket = s3.Bucket.fromBucketAttributes(this,"ImportedPhotosBucket",{
       bucketArn:awsConfig.droneWranglerConfig.bucketArnToSearchForImages,
     });
-
-    /*
-    premadePhotoBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
-    */
-   
-    premadePhotoBucket.grantReadWrite(dockerRole);
+    dronePhotosBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
+    dronePhotosBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(sendzipFunction), {suffix: 'odmoutput.zip'});
+    dronePhotosBucket.grantReadWrite(dockerRole);
+    dronePhotosBucket.grantReadWrite(zipandsendLambdaRole);
 
     const event = new events.Rule(this, 'NotificationRule', {
       ruleName: 'DroneYardNotificationRule',
@@ -190,6 +185,9 @@ export class DroneWranglerStack extends cdk.Stack {
         }
       }
     });
+
+    event.addTarget(new eventTarget.LambdaFunction(sendstatusFunction));
+
     /*
     new s3Deploy.BucketDeployment(this, 'settings yaml', {
       sources: [s3Deploy.Source.asset(root_directory, { exclude: ['**', '.*', '!settings.yaml'] })],

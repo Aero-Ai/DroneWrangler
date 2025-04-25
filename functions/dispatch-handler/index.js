@@ -2,6 +2,8 @@ const AWS = require('aws-sdk');
 const log = require('npmlog');
 
 const Batch = new AWS.Batch();
+// Initialize AWS services
+const s3 = new AWS.S3();
 
 exports.handler = async (event) => {
   log.info('Execution', `Beginning dispatch_batch_job execution. ${JSON.stringify(event)}`);
@@ -9,17 +11,29 @@ exports.handler = async (event) => {
   // Get the S3 path(s) -- multiple possible records can come in one invocation
   const jobPaths = [];
 
-  event.Records.forEach((record) => {
-    // extract the bucket / key
-    const key = record.s3.object.key.replace(/\/dispatch$/, '');
 
-    jobPaths.push({
-      name: record.s3.bucket.name,
-      key,
-    });
+    for(const record of event.Records )
+    {
+      const key = record.s3.object.key.replace(/\/dispatch$/, '');
+      const bucket = record.s3.bucket.name;
 
-    log.info('Execution', `Found new prefix ${record.s3.bucket.name}, ${key}`);
-  });
+      const params = {
+        Bucket: bucket,
+        Key: record.s3.object.key
+      };
+      
+      const data = await s3.getObject(params).promise();
+      const content = data.Body.toString('utf-8');
+      const eMail = content.split('\n')[0];
+
+      jobPaths.push({
+        name: record.s3.bucket.name,
+        key,
+        email:eMail,
+      });
+
+    }
+
 
   // Create an AWS batch job to process each path
   await Promise.all(jobPaths.map(async (path) => {
@@ -32,6 +46,7 @@ exports.handler = async (event) => {
       parameters: {
         bucket: path.name,
         key: path.key,
+        email: path.email
       },
       retryStrategy: {
         attempts: 1,

@@ -1,14 +1,4 @@
 {
-  "acknowledged-issue-numbers": [
-    32775
-  ],
-  "vpc-provider:account=212176410828:filter.vpc-id=vpc-0b702333d990fa58f:region=us-west-2:returnAsymmetricSubnets=true": {
-    "vpcId": "vpc-0b702333d990fa58f",
-    "vpcCidrBlock": "10.0.0.0/16",
-    "ownerAccountId": "212176410828",
-    "availabilityZones": [],
-    "subnetGroups": []
-  },
   "vpc-provider:account=212176410828:filter.vpc-id=vpc-0ea897b35dc54b310:region=us-west-2:returnAsymmetricSubnets=true": {
     "vpcId": "vpc-0ea897b35dc54b310",
     "vpcCidrBlock": "10.0.0.0/16",
