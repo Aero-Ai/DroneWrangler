@@ -10,6 +10,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as s3Deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as events from 'aws-cdk-lib/aws-events'
 import * as eventTarget from 'aws-cdk-lib/aws-events-targets'
+import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
 
 const fs = require('fs');
@@ -19,15 +21,17 @@ const awsConfig = require('../awsconfig.json');
 // eslint-disable-next-line no-underscore-dangle
 const root_directory = path.resolve();
 
-
-
-
 export class DroneWranglerStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+
     super(scope, id, props);
 
-    const vpc = new ec2.Vpc(this, 'DRONEWRANGLERVPC');
+    //const vpc = new ec2.Vpc(this, 'DRONEWRANGLERVPC');
+    const vpc = ec2.Vpc.fromLookup(this,'devvpc',{
+      vpcId:awsConfig.droneWranglerConfig.vpcid
+    });
+
 
     const userData = fs.readFileSync('./userdata.sh').toString();
     const setupCommands = ec2.UserData.forLinux();
@@ -56,14 +60,18 @@ export class DroneWranglerStack extends cdk.Stack {
       managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonEC2ContainerServiceforEC2Role')]
     });
 
+
+
+
     const awsManagedEnvironment = new batch.ManagedEc2EcsComputeEnvironment(this, 'DroneYardComputeEnvironment', {
       vpc,
       minvCpus: awsConfig.computeEnv.minvCpus,
       maxvCpus: awsConfig.computeEnv.maxvCpus,
       instanceTypes: awsConfig.computeEnv.instanceTypes,
       instanceRole: dockerRole,
-      launchTemplate: launchTemplate2
+      launchTemplate: launchTemplate2,
     });
+    
 
     const jobQueue = new batch.JobQueue(this, 'DroneYardJobQueue', {
       computeEnvironments: [
@@ -91,7 +99,7 @@ export class DroneWranglerStack extends cdk.Stack {
           'Ref::key',
           'output',
         ],
-        gpu: awsConfig.computeEnv.useGpu ? 1 : 0,
+        gpu: 0,
         image: ecs.ContainerImage.fromDockerImageAsset(dockerImage),
         memory: cdk.Size.mebibytes(120000),
         cpu: 1,
@@ -101,7 +109,7 @@ export class DroneWranglerStack extends cdk.Stack {
           containerPath: '/local'
         })],
         logging: logging
-      }),
+      })
     });
 
     const dispatchLambdaRole = new iam.Role(this, 'dispatch-lambda-role', {
@@ -112,7 +120,7 @@ export class DroneWranglerStack extends cdk.Stack {
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3FullAccess"));
     dispatchLambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName("AWSBatchFullAccess"));
 
-
+    /*
     const dispatchFunction = new lambda.Function(this, 'DispatchHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
@@ -123,12 +131,51 @@ export class DroneWranglerStack extends cdk.Stack {
         JOB_QUEUE: jobQueue.jobQueueName
       }
     })
-
-    const dronePhotosBucket = new s3.Bucket(this, 'DronePhotos', {      
+    */
+    const dispatchManualFunction = new lambda.Function(this, 'DispatchManualHandler', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('functions/dispatch-handler-manual'),
+      role: dispatchLambdaRole,
+      environment: {
+        JOB_DEFINITION: jobDefinition.jobDefinitionName,
+        JOB_QUEUE: jobQueue.jobQueueName
+      }
     });
 
-    dronePhotosBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
-    dronePhotosBucket.grantReadWrite(dockerRole);
+    const httpApi = new apigwv2.HttpApi(this, 'DroneProcessingHttpApi', {
+      apiName: 'Manual Drone Processing API',
+      description: 'This service processes drone images already uploaded to the DroneWrangler S3 bucket',
+      corsPreflight: {
+        allowOrigins: ['*'],
+        allowMethods: [apigwv2.CorsHttpMethod.POST,apigwv2.CorsHttpMethod.GET],
+        allowHeaders: ['*'],
+        maxAge: cdk.Duration.days(1)
+      }
+    });
+
+    const lambdaIntegration = new integrations.HttpLambdaIntegration(
+      'DroneProcessingManualIntegration',
+      dispatchManualFunction
+    );
+
+    // Add a route to the HTTP API that integrates with the Lambda function
+    httpApi.addRoutes({
+      path: '/sendProcessingJob',
+      methods: [apigwv2.HttpMethod.POST],
+      integration: lambdaIntegration,
+    });
+
+    //Get the bucket for all user's data. 
+    const premadePhotoBucket = s3.Bucket.fromBucketAttributes(this,"ImportedPhotosBucket",{
+      bucketArn:awsConfig.droneWranglerConfig.bucketArnToSearchForImages,
+    });
+
+    /*
+    premadePhotoBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(dispatchFunction), {suffix: 'dispatch'});
+    */
+   
+    premadePhotoBucket.grantReadWrite(dockerRole);
 
     const event = new events.Rule(this, 'NotificationRule', {
       ruleName: 'DroneYardNotificationRule',
@@ -137,17 +184,18 @@ export class DroneWranglerStack extends cdk.Stack {
         detailType: ['Batch Job State Change'],
         detail: {
           parameters: {
-            bucket: [dronePhotosBucket.bucketName]
+            bucket: [premadePhotoBucket.bucketName]
           },
           status: ["FAILED","STARTING","SUBMITTED","SUCCEEDED"]
         }
       }
     });
-
+    /*
     new s3Deploy.BucketDeployment(this, 'settings yaml', {
       sources: [s3Deploy.Source.asset(root_directory, { exclude: ['**', '.*', '!settings.yaml'] })],
-      destinationBucket: dronePhotosBucket
+      destinationBucket: premadePhotoBucket
     });
+    */
   }
 }
 
