@@ -77,6 +77,7 @@ export class DroneWranglerStack extends cdk.Stack {
       directory: path.join(root_directory, "webodm_docker")
     });
 
+    
     const logging = new ecs.AwsLogDriver({ streamPrefix: "dronewranglerruns" })
 
     const jobDefinition = new batch.EcsJobDefinition(this, 'DroneYardJobDefinition', {
@@ -92,8 +93,8 @@ export class DroneWranglerStack extends cdk.Stack {
         ],
         gpu: awsConfig.computeEnv.useGpu ? 1 : 0,
         image: ecs.ContainerImage.fromDockerImageAsset(dockerImage),
-        memory: cdk.Size.mebibytes(120000),
-        cpu: 4,
+        memory: cdk.Size.gibibytes(480),
+        cpu: 16,
         privileged: true,
         volumes: [batch.EcsVolume.host({
           name: 'local',

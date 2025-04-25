@@ -2,9 +2,9 @@
   "computeEnv": {
     "useGpu": false,
     "minvCpus": 0,
-    "maxvCpus": 256,
+    "maxvCpus": 512,
     "instanceTypes": [
-      "r6id.8xlarge"
+      "r7iz.16xlarge"
     ]
   },
   "droneWranglerConfig":{
